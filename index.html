@@ -43,6 +43,21 @@ h2 small{color:var(--mut);font-weight:400;font-size:13px}
 .kid{border:1px solid var(--line);background:#fff;border-radius:99px;padding:6px 14px;font:inherit;font-size:14px;color:var(--ink);cursor:pointer}
 .kid.on{background:#e8546f;border-color:#e8546f;color:#fff;font-weight:600}
 .kid.add{color:var(--mut);padding:6px 11px}
+.btns .n:not(.on):hover{color:var(--no);border-color:var(--no)}
+.pnote{display:none}
+@media print{
+  @page{size:A4;margin:10mm}
+  body{background:#fff;font-size:12px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .ctrl,.btns,.kid.add,.kids .sub,.load button,footer{display:none!important}
+  .kid{display:none}.kid.on{display:inline-block;border:0;padding:0;background:none;color:#e8546f;font-size:15px}
+  header,main{max-width:none;padding-left:0;padding-right:0}
+  .grid{grid-template-columns:repeat(4,1fr);gap:8px}
+  .card{break-inside:avoid;box-shadow:none;border:1px solid var(--line)}
+  .card.have{border:2px solid var(--ok)}.card.no{border:2px solid var(--no)}
+  h2{break-after:avoid}
+  .pnote{display:block;font-size:12px;font-weight:700;padding:0 10px 8px}
+  .card.have .pnote{color:var(--ok)}.card.no .pnote{color:var(--no)}
+}
 .load input{border:1px solid var(--line);border-radius:10px;padding:9px 12px;font:inherit;margin-right:6px}
 </style>
 </head>
@@ -62,6 +77,7 @@ h2 small{color:var(--mut);font-weight:400;font-size:13px}
   <input type="search" id="q" placeholder="Rechercher…">
   <button class="act" id="exp">⬇ Sauvegarder tous les inventaires</button>
   <button class="act" id="imp">⬆ Restaurer une sauvegarde</button>
+  <button class="act" id="prt">🖨 Imprimer en PDF</button>
   <span id="msg" class="sub"></span>
 </div></div>
 <main id="list"><div class="load">Chargement…</div></main>
@@ -154,7 +170,8 @@ function render(){
 function card(p){const s=S[p.ref]||"";
   return '<div class="card '+s+'" data-ref="'+esc(p.ref)+'"><div class="ph"><img loading="lazy" src="images/'+encodeURIComponent(p.photo)+'" alt="" onerror="this.style.opacity=.15"><span class="yr">'+p.year+'</span></div>'+
   '<div class="info"><div class="nm">'+esc(p.name)+'</div>'+(p.perso?'<div class="who">'+esc(p.perso)+'</div>':'')+(p.phr?'<div class="phr">« '+esc(p.phr).split(" / ").join(" » · « ")+' »</div>':'')+'<div class="meta">'+(p.num?'N° '+esc(p.num)+' · ':'')+(p.url?'<a href="'+esc(p.url)+'" target="_blank" rel="noopener" style="color:inherit">legami.com ↗</a><br>':'')+(p.coll?'<span class="tag">'+esc(p.coll)+'</span>':'')+esc(p.price)+'</div></div>'+
-  '<div class="btns"><button class="y'+(s==="have"?" on":"")+'" data-a="have">✓ J\'ai</button><button class="n'+(s==="no"?" on":"")+'" data-a="no">✗ Je n\'ai pas</button></div></div>';}
+  (s==="have"?'<div class="pnote">✓ J\'ai</div>':s==="no"?'<div class="pnote">♥ J\'aimerais</div>':'')+
+  '<div class="btns"><button class="y'+(s==="have"?" on":"")+'" data-a="have">✓ J\'ai</button><button class="n'+(s==="no"?" on":"")+'" data-a="no" aria-pressed="'+(s==="no")+'">'+(s==="no"?"♥":"♡")+' J\'aimerais</button></div></div>';}
 document.addEventListener("click",e=>{
   const kb=e.target.closest("[data-kid],[data-k]");
   if(kb){
@@ -172,6 +189,14 @@ document.addEventListener("click",e=>{
   const ref=b.closest(".card").dataset.ref,a=b.dataset.a;
   if(S[ref]===a)delete S[ref];else S[ref]=a;saveS();render();
 });
+$("#prt").onclick=async()=>{
+  const imgs=[...document.querySelectorAll("#list img")];
+  imgs.forEach(i=>i.loading="eager");
+  msg("Préparation du PDF…");
+  await Promise.all(imgs.map(i=>i.complete?0:new Promise(r=>{i.onload=i.onerror=r})));
+  const t=document.title;if(kid())document.title="Collection Legami - "+kid().name;
+  window.print();document.title=t;
+};
 $("#yf").onchange=e=>{yearF=e.target.value;render()};
 $("#q").oninput=e=>{query=e.target.value;render()};
 $("#exp").onclick=()=>{
